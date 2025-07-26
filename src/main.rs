@@ -21,6 +21,8 @@ use embedded_graphics::primitives::{PrimitiveStyleBuilder, Rectangle};
 
 #[cfg(feature = "simulator")]
 use crate::{data::GaugeData, display::layout::draw_ui, obd::ObdReader};
+#[cfg(feature = "pi")]
+use crate::{data::GaugeData, display::layout::draw_ui, obd::ObdReader};
 
 use platform::init_display;
 
@@ -66,6 +68,8 @@ fn main() {
     #[cfg(feature = "pi")]
     {
         loop {
+            let data: GaugeData = data_source.read_data();
+
             let black_fill = PrimitiveStyleBuilder::new()
                 .fill_color(Rgb565::BLACK)
                 .build();
@@ -75,9 +79,10 @@ fn main() {
                 .draw(&mut display)
                 .unwrap();
 
+            let _ = draw_ui(&mut display, &data);
+
             display.flush();
 
-            // TODO: Read data from obd2 and draw it
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
     }
