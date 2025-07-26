@@ -83,7 +83,7 @@ fn main() {
 
             display.flush();
 
-            std::thread::sleep(std::time::Duration::from_millis(100));
+            thread::sleep(Duration::from_millis(100));
         }
     }
 }

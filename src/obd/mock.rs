@@ -15,16 +15,16 @@ impl ObdReader for MockObd {
     fn read_data(&mut self) -> GaugeData {
         self.tick += 1;
 
-        let rpm = 1000 + ((self.tick * 50) % 7000);
+        let horse_power = 0 + ((self.tick * 10) % 200);
         let coolant_temp = 60.0 + ((self.tick % 300) as f32) * 0.1;
         let voltage = 13.5 + (((self.tick / 10) % 10) as f32 * 0.02);
-        let speed = ((self.tick / 5) % 200) as u8;
+        let engine_load = ((self.tick / 1) % 160) as u8;
 
         GaugeData {
-            rpm: rpm as u16,
+            horse_power: horse_power as u16,
             coolant_temp,
             voltage,
-            speed,
+            engine_load,
         }
     }
 }
