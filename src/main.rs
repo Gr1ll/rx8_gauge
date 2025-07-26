@@ -75,6 +75,8 @@ fn main() {
                 .draw(&mut display)
                 .unwrap();
 
+            display.flush();
+
             // TODO: Read data from obd2 and draw it
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
