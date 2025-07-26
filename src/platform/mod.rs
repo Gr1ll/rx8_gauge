@@ -13,11 +13,11 @@ pub use fb_display::FbDisplay as Display;
 pub fn init_display() -> Display {
     #[cfg(feature = "simulator")]
     {
-        sim_display::SimDisplay::new()
+        Display::new()
     }
 
     #[cfg(feature = "pi")]
     {
-        FbDisplay::new().expect("Failed to open framebuffer")
+        Display::new().expect("Failed to open framebuffer")
     }
 }
