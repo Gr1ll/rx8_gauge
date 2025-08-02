@@ -5,6 +5,11 @@ mod obd;
 mod platform;
 
 #[cfg(feature = "pi")]
+use std::thread;
+#[cfg(feature = "pi")]
+use std::time::Duration;
+
+#[cfg(feature = "pi")]
 use embedded_graphics::pixelcolor::Rgb565;
 #[cfg(not(feature = "pi"))]
 use embedded_graphics::pixelcolor::Rgb565;
