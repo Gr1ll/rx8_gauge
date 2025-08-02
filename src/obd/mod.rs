@@ -9,7 +9,7 @@ pub trait ObdReader {
     fn read_data(&mut self) -> GaugeData;
 }
 
-#[cfg(feature = "pi")]
+#[cfg(all(feature = "pi", not(debug_assertions)))]
 pub fn init_obd() -> impl ObdReader {
     real::RealObd::new("ip").expect("Failed to connect to OBD-II WiFi adapter")
 }
