@@ -1,6 +1,6 @@
 use crate::data::GaugeData;
 use embedded_graphics::Drawable;
-use embedded_graphics::prelude::Primitive;
+use embedded_graphics::prelude::{Primitive, WebColors};
 use embedded_graphics::{
     mono_font::MonoTextStyle,
     pixelcolor::Rgb565,
@@ -8,7 +8,7 @@ use embedded_graphics::{
     primitives::{PrimitiveStyle, Rectangle},
     text::Text,
 };
-use profont::PROFONT_24_POINT;
+use profont::{PROFONT_14_POINT, PROFONT_24_POINT};
 pub fn draw_ui<D: DrawTarget<Color = Rgb565>>(
     display: &mut D,
     data: &GaugeData,
@@ -33,30 +33,58 @@ pub fn draw_ui<D: DrawTarget<Color = Rgb565>>(
     .into_styled(style)
     .draw(display)?;
 
-    let text_style = MonoTextStyle::new(&PROFONT_24_POINT, Rgb565::WHITE);
+    let text_style_primary = MonoTextStyle::new(&PROFONT_24_POINT, Rgb565::WHITE);
+    let text_style_secondary = MonoTextStyle::new(&PROFONT_14_POINT, Rgb565::CSS_LIGHT_SLATE_GRAY);
 
     Text::new(
-        &format!("{} HP", data.horse_power),
+        &format!("{:.1}C", data.oil_temp_est),
         Point::new(75, 80),
-        text_style,
+        text_style_primary,
     )
     .draw(display)?;
     Text::new(
-        &format!("{:.1}°C", data.coolant_temp),
-        Point::new((w / 2 + 75) as i32, 80),
-        text_style,
+        &format!("oil est."),
+        Point::new(80, 105),
+        text_style_secondary,
     )
     .draw(display)?;
+
+    Text::new(
+        &format!("{:.1}C", data.coolant_temp),
+        Point::new((w / 2 + 75) as i32, 80),
+        text_style_primary,
+    )
+    .draw(display)?;
+    Text::new(
+        &format!("water"),
+        Point::new((w / 2 + 87) as i32, 105),
+        text_style_secondary,
+    )
+    .draw(display)?;
+
     Text::new(
         &format!("{:.1}V", data.voltage),
         Point::new(75, (h / 2 + 80) as i32),
-        text_style,
+        text_style_primary,
     )
     .draw(display)?;
     Text::new(
+        &format!("voltage"),
+        Point::new(77, (h / 2 + 105) as i32),
+        text_style_secondary,
+    )
+    .draw(display)?;
+
+    Text::new(
         &format!("{}%", data.engine_load),
         Point::new((w / 2 + 90) as i32, (h / 2 + 80) as i32),
-        text_style,
+        text_style_primary,
+    )
+    .draw(display)?;
+    Text::new(
+        &format!("load"),
+        Point::new((w / 2 + 93) as i32, (h / 2 + 105) as i32),
+        text_style_secondary,
     )
     .draw(display)?;
 

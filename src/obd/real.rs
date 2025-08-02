@@ -96,8 +96,10 @@ impl ObdReader for RealObd {
             })
             .unwrap_or(0);
 
+        let oil_temp_est = estimate_oil_temp(coolant_temp, rpm, engine_load);
+
         GaugeData {
-            horse_power: rpm_to_hp(rpm),
+            oil_temp_est,
             coolant_temp,
             voltage,
             engine_load,
@@ -105,6 +107,19 @@ impl ObdReader for RealObd {
     }
 }
 
-fn rpm_to_hp(rpm: f32) -> u16 {
-    ((rpm * 0.07).min(250.0)) as u16
+fn estimate_oil_temp(coolant_temp: f32, rpm: f32, engine_load: u8) -> f32 {
+    let mut offset = 10.0;
+
+    if rpm > 6000.0 {
+        offset += 10.0;
+    } else if rpm > 4000.0 {
+        offset += 5.0;
+    }
+
+    let load_factor = (engine_load as f32) / 255.0;
+    offset += load_factor * 5.0;
+
+    offset = offset.clamp(5.0, 25.0);
+
+    coolant_temp + offset
 }
