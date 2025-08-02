@@ -1,6 +1,6 @@
-#[cfg(not(feature = "pi"))]
+#[cfg(not(all(feature = "pi", not(debug_assertions))))]
 pub mod mock;
-#[cfg(feature = "pi")]
+#[cfg(all(feature = "pi", not(debug_assertions)))]
 pub mod real;
 
 use crate::data::GaugeData;
