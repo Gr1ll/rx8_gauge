@@ -9,6 +9,7 @@ embedded-graphics = "0.8.1"
 embedded-graphics-simulator = "0.7.0"
 framebuffer = { version = "0.3.1", optional = true }
 profont = "0.7.0"
+serialport = "4"
 
 [features]
 pi = ["framebuffer"]

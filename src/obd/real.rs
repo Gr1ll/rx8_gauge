@@ -1,37 +1,34 @@
 use std::io::{BufRead, BufReader, Result, Write};
-use std::net::TcpStream;
 use std::time::Duration;
+
+use serialport::SerialPort;
 
 use super::ObdReader;
 use crate::data::GaugeData;
 
 pub struct RealObd {
-    stream: TcpStream,
-    reader: BufReader<TcpStream>,
+    port: Box<dyn SerialPort>,
+    reader: BufReader<Box<dyn SerialPort>>,
 }
 
 impl RealObd {
     pub fn new() -> Result<Self> {
-        let stream = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open("/dev/rfcomm0")?;
-        stream.set_read_timeout(Some(Duration::from_secs(2)))?;
-        stream.set_write_timeout(Some(Duration::from_secs(2)))?;
+        let port = serialport::new("/dev/rfcomm0", 38400)
+            .timeout(Duration::from_secs(2))
+            .open()?;
 
-        let reader = BufReader::new(stream.try_clone()?);
+        let reader = BufReader::new(port.try_clone()?);
 
-        Ok(Self { stream, reader })
+        Ok(Self { port, reader })
     }
 
     fn send_command(&mut self, cmd: &str) -> Result<String> {
         let full_cmd = format!("{}\r", cmd);
-        self.stream.write_all(full_cmd.as_bytes())?;
-        self.stream.flush()?;
+        self.port.write_all(full_cmd.as_bytes())?;
+        self.port.flush()?;
 
         let mut response = String::new();
         self.reader.read_line(&mut response)?;
-
         Ok(response.trim().to_string())
     }
 }
