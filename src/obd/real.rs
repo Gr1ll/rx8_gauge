@@ -11,8 +11,11 @@ pub struct RealObd {
 }
 
 impl RealObd {
-    pub fn new(ip: &str) -> Result<Self> {
-        let stream = TcpStream::connect(format!("{}:35000", ip))?;
+    pub fn new() -> Result<Self> {
+        let stream = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("/dev/rfcomm0")?;
         stream.set_read_timeout(Some(Duration::from_secs(2)))?;
         stream.set_write_timeout(Some(Duration::from_secs(2)))?;
 
