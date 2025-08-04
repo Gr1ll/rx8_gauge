@@ -60,7 +60,7 @@ impl ObdReader for RealObd {
     fn read_data(&mut self) -> GaugeData {
         fn parse_bytes(response: &str) -> Vec<u8> {
             response
-                .lines()
+                .split(|c| c == '\r' || c == '\n')
                 .filter(|line| line.trim_start().starts_with("41"))
                 .flat_map(|line| {
                     line.split_whitespace()
