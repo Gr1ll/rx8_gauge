@@ -106,8 +106,10 @@ impl ObdReader for RealObd {
             .and_then(|resp| {
                 let bytes = parse_bytes(&resp);
                 eprintln!("[Voltage] Raw bytes: {:?}", bytes);
-                if bytes.len() >= 3 && bytes[0] == 0x41 && bytes[1] == 0x42 {
-                    Some(bytes[2] as f32 * 0.1)
+                if bytes.len() >= 4 && bytes[0] == 0x41 && bytes[1] == 0x42 {
+                    let a = bytes[2] as u16;
+                    let b = bytes[3] as u16;
+                    Some(((a * 256 + b) as f32) / 1000.0)
                 } else {
                     None
                 }
