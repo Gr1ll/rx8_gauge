@@ -1,14 +1,12 @@
-use std::io::{BufReader, Result, Write};
-use std::time::Duration;
-
 use serialport::SerialPort;
+use std::io::{Result, Write};
+use std::time::Duration;
 
 use super::ObdReader;
 use crate::data::GaugeData;
 
 pub struct RealObd {
     port: Box<dyn SerialPort>,
-    reader: BufReader<Box<dyn SerialPort>>,
 }
 
 impl RealObd {
@@ -17,45 +15,43 @@ impl RealObd {
             .timeout(Duration::from_secs(2))
             .open()?;
 
-        let reader = BufReader::new(port.try_clone()?);
+        eprintln!("[RealObd::new] Opened /dev/rfcomm0 at 38400 baud");
 
-        eprintln!("[RealObd::new] Opened serial port /dev/rfcomm0 at 38400 baud");
-
-        Ok(Self { port, reader })
+        Ok(Self { port })
     }
 
     fn send_command(&mut self, cmd: &str) -> Result<String> {
         let full_cmd = format!("{}\r", cmd);
-        eprintln!("[send_command] Sending: {:?}", full_cmd.trim_end());
 
+        self.port.clear(serialport::ClearBuffer::All)?;
         self.port.write_all(full_cmd.as_bytes())?;
         self.port.flush()?;
 
+        eprintln!("[RealObd::send_command] Sent: {:?}", full_cmd.trim_end());
+
         let mut response = String::new();
+        let mut buf = [0u8; 128];
+
         loop {
-            let mut buf = [0u8; 128];
             match self.port.read(&mut buf) {
                 Ok(n) if n > 0 => {
                     let chunk = String::from_utf8_lossy(&buf[..n]);
-                    eprintln!("[send_command] Received chunk: {:?}", chunk);
                     response.push_str(&chunk);
-                    if response.contains('>') {
-                        eprintln!("[send_command] Prompt '>' detected, end of response");
+
+                    if chunk.contains('>') {
                         break;
                     }
                 }
-                Ok(_) => {
-                    eprintln!("[send_command] No more data received");
-                    break;
-                }
+                Ok(_) => continue,
                 Err(e) => {
-                    eprintln!("[send_command] Read error: {}", e);
+                    eprintln!("[RealObd::send_command] Read error: {}", e);
                     break;
                 }
             }
         }
+
         let trimmed = response.trim().to_string();
-        eprintln!("[send_command] Full response: {:?}", trimmed);
+        eprintln!("[RealObd::send_command] Received: {:?}", trimmed);
         Ok(trimmed)
     }
 }
@@ -63,8 +59,7 @@ impl RealObd {
 impl ObdReader for RealObd {
     fn read_data(&mut self) -> GaugeData {
         fn parse_bytes(response: &str) -> Vec<u8> {
-            eprintln!("[parse_bytes] Parsing response:\n{}", response);
-            let bytes = response
+            response
                 .lines()
                 .find(|line| line.trim_start().starts_with("41"))
                 .map(|line| {
@@ -72,12 +67,7 @@ impl ObdReader for RealObd {
                         .filter_map(|b| u8::from_str_radix(b, 16).ok())
                         .collect()
                 })
-                .unwrap_or_else(|| {
-                    eprintln!("[parse_bytes] No valid '41' line found, returning empty vec");
-                    Vec::new()
-                });
-            eprintln!("[parse_bytes] Parsed bytes: {:?}", bytes);
-            bytes
+                .unwrap_or_default()
         }
 
         let rpm = self
@@ -85,80 +75,65 @@ impl ObdReader for RealObd {
             .ok()
             .and_then(|resp| {
                 let bytes = parse_bytes(&resp);
+                eprintln!("[RPM] Raw bytes: {:?}", bytes);
                 if bytes.len() >= 4 && bytes[0] == 0x41 && bytes[1] == 0x0C {
                     let a = bytes[2] as u16;
                     let b = bytes[3] as u16;
-                    let rpm_val = ((a * 256 + b) as f32) / 4.0;
-                    eprintln!("[read_data] RPM: {}", rpm_val);
-                    Some(rpm_val)
+                    Some(((a * 256 + b) as f32) / 4.0)
                 } else {
-                    eprintln!("[read_data] RPM response invalid or incomplete");
                     None
                 }
             })
-            .unwrap_or_else(|| {
-                eprintln!("[read_data] RPM command failed, defaulting to 0");
-                0.0
-            });
+            .unwrap_or(0.0);
 
         let coolant_temp = self
             .send_command("0105")
             .ok()
             .and_then(|resp| {
                 let bytes = parse_bytes(&resp);
+                eprintln!("[Coolant Temp] Raw bytes: {:?}", bytes);
                 if bytes.len() >= 3 && bytes[0] == 0x41 && bytes[1] == 0x05 {
-                    let temp = bytes[2] as f32 - 40.0;
-                    eprintln!("[read_data] Coolant Temp: {}", temp);
-                    Some(temp)
+                    Some(bytes[2] as f32 - 40.0)
                 } else {
-                    eprintln!("[read_data] Coolant temp response invalid or incomplete");
                     None
                 }
             })
-            .unwrap_or_else(|| {
-                eprintln!("[read_data] Coolant temp command failed, defaulting to 0");
-                0.0
-            });
+            .unwrap_or(0.0);
 
         let voltage = self
             .send_command("0142")
             .ok()
             .and_then(|resp| {
                 let bytes = parse_bytes(&resp);
+                eprintln!("[Voltage] Raw bytes: {:?}", bytes);
                 if bytes.len() >= 3 && bytes[0] == 0x41 && bytes[1] == 0x42 {
-                    let volt = bytes[2] as f32 * 0.1;
-                    eprintln!("[read_data] Voltage: {}", volt);
-                    Some(volt)
+                    Some(bytes[2] as f32 * 0.1)
                 } else {
-                    eprintln!("[read_data] Voltage response invalid or incomplete");
                     None
                 }
             })
-            .unwrap_or_else(|| {
-                eprintln!("[read_data] Voltage command failed, defaulting to 0");
-                0.0
-            });
+            .unwrap_or(0.0);
 
         let engine_load = self
             .send_command("0104")
             .ok()
             .and_then(|resp| {
                 let bytes = parse_bytes(&resp);
+                eprintln!("[Engine Load] Raw bytes: {:?}", bytes);
                 if bytes.len() >= 3 && bytes[0] == 0x41 && bytes[1] == 0x04 {
-                    eprintln!("[read_data] Engine Load: {}", bytes[2]);
                     Some(bytes[2])
                 } else {
-                    eprintln!("[read_data] Engine load response invalid or incomplete");
                     None
                 }
             })
-            .unwrap_or_else(|| {
-                eprintln!("[read_data] Engine load command failed, defaulting to 0");
-                0
-            });
+            .unwrap_or(0);
 
         let oil_temp_est = estimate_oil_temp(coolant_temp, rpm, engine_load);
-        eprintln!("[read_data] Estimated Oil Temp: {}", oil_temp_est);
+
+        eprintln!(
+            "[GaugeData] RPM: {:.1}, Coolant: {:.1}, Voltage: {:.1}, Load: {}, Oil Est: {:.1}",
+            rpm, coolant_temp, voltage, engine_load, oil_temp_est
+        );
 
         GaugeData {
             oil_temp_est,
