@@ -61,13 +61,13 @@ impl ObdReader for RealObd {
         fn parse_bytes(response: &str) -> Vec<u8> {
             response
                 .lines()
-                .find(|line| line.trim_start().starts_with("41"))
-                .map(|line| {
+                .filter(|line| line.trim_start().starts_with("41"))
+                .flat_map(|line| {
                     line.split_whitespace()
                         .filter_map(|b| u8::from_str_radix(b, 16).ok())
-                        .collect()
+                        .collect::<Vec<u8>>()
                 })
-                .unwrap_or_default()
+                .collect()
         }
 
         let rpm = self
