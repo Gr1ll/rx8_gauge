@@ -110,12 +110,12 @@ impl ObdReader for RealObd {
             .and_then(|resp| {
                 let bytes = parse_bytes(&resp);
                 if bytes.len() >= 3 && bytes[0] == 0x41 && bytes[1] == 0x04 {
-                    Some(bytes[2])
+                    Some((bytes[2] as f32) * 100.0 / 255.0)
                 } else {
                     None
                 }
             })
-            .unwrap_or(0);
+            .unwrap_or(0.0);
 
         let oil_temp_est = estimate_oil_temp(coolant_temp, rpm, engine_load);
 
@@ -128,7 +128,7 @@ impl ObdReader for RealObd {
     }
 }
 
-fn estimate_oil_temp(coolant_temp: f32, rpm: f32, engine_load: u8) -> f32 {
+fn estimate_oil_temp(coolant_temp: f32, rpm: f32, engine_load: f32) -> f32 {
     let mut offset = 10.0;
 
     if rpm > 6000.0 {
@@ -137,7 +137,7 @@ fn estimate_oil_temp(coolant_temp: f32, rpm: f32, engine_load: u8) -> f32 {
         offset += 5.0;
     }
 
-    let load_factor = (engine_load as f32) / 255.0;
+    let load_factor = engine_load / 255.0;
     offset += load_factor * 5.0;
 
     offset = offset.clamp(5.0, 25.0);

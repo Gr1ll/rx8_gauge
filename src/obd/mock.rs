@@ -18,7 +18,7 @@ impl ObdReader for MockObd {
 
         let coolant_temp = 60.0 + ((self.tick % 300) as f32) * 0.1;
         let voltage = 13.5 + (((self.tick / 10) % 10) as f32 * 0.02);
-        let engine_load = ((self.tick / 1) % 160) as u8;
+        let engine_load = ((self.tick / 1) % 160) as f32;
 
         let oil_temp_est = estimate_oil_temp(coolant_temp, rpm, engine_load);
 
@@ -31,7 +31,7 @@ impl ObdReader for MockObd {
     }
 }
 
-fn estimate_oil_temp(coolant_temp: f32, rpm: f32, engine_load: u8) -> f32 {
+fn estimate_oil_temp(coolant_temp: f32, rpm: f32, engine_load: f32) -> f32 {
     let mut offset = 15.0;
 
     if rpm > 6000.0 {
@@ -40,7 +40,7 @@ fn estimate_oil_temp(coolant_temp: f32, rpm: f32, engine_load: u8) -> f32 {
         offset += 5.0;
     }
 
-    let load_factor = (engine_load as f32) / 255.0;
+    let load_factor = engine_load / 255.0;
     offset += load_factor * 5.0;
 
     offset = offset.clamp(10.0, 35.0);
