@@ -76,7 +76,7 @@ pub fn draw_ui<D: DrawTarget<Color = Rgb565>>(
     .draw(display)?;
 
     Text::new(
-        &format!("{}%", data.engine_load),
+        &format!("{}%", data.engine_load.round()),
         Point::new((w / 2 + 90) as i32, (h / 2 + 80) as i32),
         text_style_primary,
     )
